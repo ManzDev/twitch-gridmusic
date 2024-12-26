@@ -1,4 +1,6 @@
 import "./SoundCell.js";
+import "./GridLines.js";
+import { playSong } from "../instruments/playSong.js";
 
 class SoundPool extends HTMLElement {
   constructor() {
@@ -7,6 +9,8 @@ class SoundPool extends HTMLElement {
 
     this.NUM_CELLS = 10;
     this.style.setProperty("--num-cells", this.NUM_CELLS);
+
+    this.pairInstruments = [];
   }
 
   static get styles() {
@@ -41,25 +45,24 @@ class SoundPool extends HTMLElement {
           z-index: 5;
         }
       }
-
-      svg.lines {
-        position: absolute;
-
-        & line {
-          stroke-dasharray: 0 200;
-          stroke-dashoffset: 0;
-        }
-      }
     `;
   }
 
   connectedCallback() {
     this.render();
     this.createCells();
+    this.addListeners();
     this.data = [
-      { name: "play", volume: 1, id: 42, next: [2, 5] }
+      /*{name: "play",volume:1,id:42,next:[62,44]},
+        {name:"acoustic_shaker",volume:1,id:44,next:[42,46,64]},
+        {name:"bongo_hit",volume:1,id:62,next:[42]},
+        {name:"snare-5",volume:1,id:46,next:[44,48]},
+        {name:"sidestick",volume:1,id:48,next:[46]},
+        {name:"tumba",volume:1,id:64,next:[44]}*/
+      { name: "play", volume: 1, id: 42, next: [] }
     ];
     this.renderInstruments();
+    this.gridlines = this.shadowRoot.querySelector("grid-lines");
   }
 
   createCells() {
@@ -69,6 +72,14 @@ class SoundPool extends HTMLElement {
       cell.dataset.index = i;
       container.append(cell);
     }
+  }
+
+  playSong() {
+    playSong(this.data);
+  }
+
+  addListeners() {
+    const container = this.shadowRoot.querySelector(".container");
     container.addEventListener("click", (ev) => {
       const isCell = ev.target.nodeName === "SOUND-CELL";
       const name = document.querySelector("grid-music").currentInstrument;
@@ -76,17 +87,40 @@ class SoundPool extends HTMLElement {
       if (isCell && name) {
         const hasInstrument = ev.target.hasInstrument();
 
-        if (hasInstrument) return; // Aquí gestionar lineas
+        if (hasInstrument) {
+          if (this.pairInstruments.length < 2) {
+            this.pairInstruments.push(Number(ev.target.dataset.index));
+          }
+          if (this.pairInstruments.length === 2) {
+            const [i1, i2] = this.pairInstruments;
+
+            this.gridlines.addLine(i1, i2);
+            const inst1 = this.data.find(item => item.id === i1);
+            const inst2 = this.data.find(item => item.id === i2);
+            inst1.next.push(i2);
+            inst2.next.push(i1);
+
+            this.pairInstruments.length = 0;
+          }
+          return;
+        }
 
         ev.target.setInstrument(name);
-        this.data.push({ name, volume: 1, id: Number(ev.target.dataset.index) })
+        this.data.push({
+          name,
+          volume: 1,
+          id: Number(ev.target.dataset.index),
+          next: []
+        });
       }
     });
 
     container.addEventListener("contextmenu", (ev) => {
       const isCell = ev.target.nodeName === "SOUND-CELL";
+      const instrument = this.data.find(item => item.id === Number(ev.target.dataset.index)).name;
 
       if (isCell) {
+        if (instrument === "play") return;
         ev.preventDefault();
         ev.target.removeInstrument();
         this.data = this.data.filter(item => item.id != ev.target.dataset.index)
@@ -106,9 +140,7 @@ class SoundPool extends HTMLElement {
     this.shadowRoot.innerHTML = /* html */`
     <style>${SoundPool.styles}</style>
     <div class="container">
-      <svg viewBox="0 0 ${this.NUM_CELLS * this.NUM_CELLS} ${this.NUM_CELLS * this.NUM_CELLS}" class="lines">
-        <line stroke="red" x1="25" y1="45" x2="45" y2="45" />
-      </svg>
+      <grid-lines cells="${this.NUM_CELLS}"></grid-lines>
     </div>`;
   }
 }

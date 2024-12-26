@@ -18,7 +18,7 @@ class InstrumentPool extends HTMLElement {
         padding: 1rem;
         display: flex;
         flex-wrap: wrap;
-        gap: 0.5rem;
+        gap: 0.1rem;
         max-width: 400px;
       }
     `;
@@ -27,6 +27,7 @@ class InstrumentPool extends HTMLElement {
   connectedCallback() {
     this.render();
     this.createInstruments();
+    this.addListeners();
   }
 
   createInstruments() {
@@ -36,10 +37,16 @@ class InstrumentPool extends HTMLElement {
       instrument.setAttribute("name", name);
       container.append(instrument);
     });
+
+  }
+
+  addListeners() {
+    const container = this.shadowRoot.querySelector(".container");
     container.addEventListener("click", (ev) => {
       const isInstrument = ev.target.nodeName === "INSTRUMENT-SOUND";
 
       if (isInstrument) {
+        this.unselectAll();
         const name = ev.target.getAttribute("name");
         const event = new CustomEvent("SELECT_INSTRUMENT", {
           detail: name,
@@ -48,8 +55,18 @@ class InstrumentPool extends HTMLElement {
         });
         this.dispatchEvent(event);
         ev.target.play();
+        this.select(ev.target);
       }
     });
+  }
+
+  unselectAll() {
+    const container = [...this.shadowRoot.querySelectorAll(".container instrument-sound")];
+    container.forEach(instrument => instrument.classList.remove("active"));
+  }
+
+  select(instrument) {
+    instrument.classList.add("active");
   }
 
   render() {

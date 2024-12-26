@@ -7,7 +7,12 @@ class InstrumentSound extends HTMLElement {
   static get styles() {
     return /* css */`
       :host {
+        border: 2px solid transparent;
+        border-radius: 5px;
+      }
 
+      :host(.active) {
+        border: 2px solid gold;
       }
 
       .container {
@@ -16,8 +21,13 @@ class InstrumentSound extends HTMLElement {
         height: var(--cell-size);
         display: grid;
         place-items: center;
-        border-radius: 5px;
-        filter: grayscale(100%);
+        border-radius: inherit;
+
+        & img {
+          width: 60%;
+          height: 60%;
+          filter: invert(100%);
+        }
       }
     `;
   }
